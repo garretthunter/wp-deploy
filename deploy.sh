@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/bash -x
 
-# set workind dir and include env setup
+# set working dir and include env setup
 cd "$(dirname "$0")"
 source setup-bash.sh
 
@@ -29,8 +29,13 @@ else
 	git checkout master
 fi
 
-# copy everything over from git
+# copy source code from git
 rsync --recursive --exclude=".*" $SRC_DIR/* $DEST_DIR
+#robocopy $SRC_DIR $DEST_DIR -S -xd "assets" -xd ".git" -xd ".idea" -xd ".svn" -xf ".*" -purge
+
+# copy assets from git
+rsync --recursive --exclude=".*" $SRC_DIR/assets/* $DEST_DIR/../assets
+#robocopy $SRC_DIR/assets $DEST_DIR/../assets -Xd ".git" -xd ".idea" -xd ".svn" -xf ".*" -purge
 
 # check .svnignore
 for file in $(cat "$SRC_DIR/.svnignore" 2> /dev/null)
@@ -41,8 +46,8 @@ done
 cd $DEST_DIR
 
 # Transform the readme
-if [ -f readme.md ]; then
-	mv readme.md readme.txt
+if [ -f README.md ]; then
+	mv README.md readme.txt
 	sed -i '' -e 's/^# \(.*\)$/=== \1 ===/' -e 's/ #* ===$/ ===/' -e 's/^## \(.*\)$/== \1 ==/' -e 's/ #* ==$/ ==/' -e 's/^### \(.*\)$/= \1 =/' -e 's/ #* =$/ =/' readme.txt
 fi
 
@@ -55,6 +60,7 @@ svn stat
 read -r -p "Commit to SVN? (y/n) " should_commit
 
 if [ "$should_commit" = "y" ]; then
+    cd ${BASEDIR}/svn
 	svn ci -m "$MSG"
 else
 	echo "Commit Aborted!"
