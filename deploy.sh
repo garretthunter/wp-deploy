@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # set working dir and include env setup
 cd "$(dirname "$0")"
@@ -30,12 +30,12 @@ else
 fi
 
 # copy source code from git
-rsync --recursive --exclude=".*" $SRC_DIR/* $DEST_DIR
-#robocopy $SRC_DIR $DEST_DIR -S -xd "assets" -xd ".git" -xd ".idea" -xd ".svn" -xf ".*" -purge
+#rsync --recursive --exclude=".*" --exclude="assets" $SRC_DIR/* $DEST_DIR
+robocopy $SRC_DIR $DEST_DIR -S -xd "assets" -xd ".git" -xd ".idea" -xd ".svn" -xf ".*" -purge
 
 # copy assets from git
-rsync --recursive --exclude=".*" $SRC_DIR/assets/* $DEST_DIR/../assets
-#robocopy $SRC_DIR/assets $DEST_DIR/../assets -Xd ".git" -xd ".idea" -xd ".svn" -xf ".*" -purge
+#rsync --recursive --exclude=".*" $SRC_DIR/assets/* $DEST_DIR/../assets
+robocopy $SRC_DIR/assets $DEST_DIR/../assets -Xd ".git" -xd ".idea" -xd ".svn" -xf ".*" -purge
 
 # check .svnignore
 for file in $(cat "$SRC_DIR/.svnignore" 2> /dev/null)
@@ -48,19 +48,24 @@ cd $DEST_DIR
 # Transform the readme
 if [ -f README.md ]; then
 	mv README.md readme.txt
-	sed -i '' -e 's/^# \(.*\)$/=== \1 ===/' -e 's/ #* ===$/ ===/' -e 's/^## \(.*\)$/== \1 ==/' -e 's/ #* ==$/ ==/' -e 's/^### \(.*\)$/= \1 =/' -e 's/ #* =$/ =/' readme.txt
+	sed -i -e 's/^# \(.*\)$/=== \1 ===/' -e 's/ #* ===$/ ===/' -e 's/^## \(.*\)$/== \1 ==/' -e 's/ #* ==$/ ==/' -e 's/^### \(.*\)$/= \1 =/' -e 's/ #* =$/ =/' readme.txt
 fi
 
-# svn addremove
-svn stat | awk '/^\?/ {print $2}' | xargs svn add > /dev/null 2>&1
+# svn remove
+cd ${BASEDIR}/svn/assets
 svn stat | awk '/^\!/ {print $2}' | xargs svn rm --force
+cd ${BASEDIR}/svn/trunk
+svn stat | awk '/^\!/ {print $2}' | xargs svn rm --force
+
+# svn add
+cd ${BASEDIR}/svn/
+svn add --force .
 
 svn stat
 
 read -r -p "Commit to SVN? (y/n) " should_commit
 
 if [ "$should_commit" = "y" ]; then
-    cd ${BASEDIR}/svn
 	svn ci -m "$MSG"
 else
 	echo "Commit Aborted!"
